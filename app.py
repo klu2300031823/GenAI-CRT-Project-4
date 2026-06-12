@@ -10,7 +10,7 @@
 # genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 # model = genai.GenerativeModel("gemini-2.5-flash")
 
-# st.title("📞 Multi-Domain Call Center Supervisor Assistant")
+# st.title(" Multi-Domain Call Center Supervisor Assistant")
 
 # mode = st.sidebar.radio(
 #     "Choose Mode",
@@ -23,7 +23,7 @@
 
 # if mode == "Call Transcript Analysis":
 
-#     st.header("📄 Call Transcript Analysis")
+#     st.header(" Call Transcript Analysis")
 
 #     transcript = st.text_area(
 #         "Paste Transcript",
@@ -91,7 +91,7 @@
 
 # else:
 
-#     st.header("💬 Live Customer Interaction")
+#     st.header(" Live Customer Interaction")
 
 #     department = st.selectbox(
 #         "Select Department",
@@ -280,7 +280,7 @@
 
 #     st.divider()
 
-#     if st.button("📊 End Call & Generate Supervisor Report"):
+#     if st.button(" End Call & Generate Supervisor Report"):
 
 #         if st.session_state.conversation_text.strip() == "":
 #             st.warning("No conversation available.")
@@ -317,12 +317,12 @@
 #         with st.spinner("Generating Supervisor Report..."):
 #             report = model.generate_content(analysis_prompt)
 
-#         st.subheader("📋 Supervisor Analysis Report")
+#         st.subheader(" Supervisor Analysis Report")
 #         st.markdown(report.text)
 
 #         feedback = st.radio(
 #             "Was the analysis useful?",
-#             ["👍 Yes", "👎 No"],
+#             [" Yes", " No"],
 #             key="feedback"
 #         )
 
