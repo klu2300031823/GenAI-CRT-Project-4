@@ -1,217 +1,100 @@
 import streamlit as st
+from datetime import datetime
+import random
 
-st.set_page_config(page_title="Multi-Domain Call Center Supervisor Assistant",
-                   layout="wide")
+# -----------------------------
+# SIMULATED LLM RESPONSE
+# (Replace with OpenAI / Azure / local model later)
+# -----------------------------
+def generate_response(module, user_input):
+    summary = f"This interaction is related to {module}. The user is asking about: {user_input}."
 
-st.title("📞 Multi-Domain Call Center Supervisor Assistant")
-
-department = st.selectbox(
-    "Select Department",
-    [
-        "University Admissions",
-        "Loan Services",
-        "Survey & Feedback",
-        "Election Information",
-        "Healthcare Support"
-    ]
-)
-
-transcript = st.text_area(
-    "Paste Call Transcript",
-    height=250
-)
-
-def analyze(text, dept):
-
-    text_l = text.lower()
-
-    # Customer issue
-    issue = "Not identified"
-    for line in text.split("\n"):
-        if line.lower().startswith("customer"):
-            issue = line.split(":", 1)[1].strip()
-            break
-
-    # Sentiment
-    positive = ["thank", "good", "great", "happy", "excellent"]
-    negative = ["problem", "issue", "delay", "angry",
-                "complaint", "cancel", "disappointed"]
-
-    pos = sum(text_l.count(i) for i in positive)
-    neg = sum(text_l.count(i) for i in negative)
-
-    if neg > pos:
-        sentiment = "Negative"
-    elif pos > neg:
-        sentiment = "Positive"
-    else:
-        sentiment = "Neutral"
-
-    # Priority
-    priority = "Low"
-
-    if any(x in text_l for x in ["delay", "problem", "issue"]):
-        priority = "Medium"
-
-    if any(x in text_l for x in ["angry", "urgent", "emergency"]):
-        priority = "High"
-
-    # Agent Score
-    score = 50
-
-    if "sorry" in text_l or "apologize" in text_l:
-        score += 15
-
-    if "check" in text_l:
-        score += 10
-
-    if "review" in text_l:
-        score += 10
-
-    if "escalate" in text_l:
-        score += 15
-
-    score = min(score, 100)
-
-    # Department Logic
-
-    if dept == "University Admissions":
-
-        intent = "Admission Inquiry"
-
-        action = """
-• Share admission guidelines
-• Provide application deadlines
-• Send eligibility details
-"""
-
-        risk = "No Major Risk"
-
-    elif dept == "Loan Services":
-
-        intent = "Loan Inquiry"
-
-        action = """
-• Verify loan application
-• Check document status
-• Update customer
-"""
-
-        risk = "Potential Service Delay"
-
-    elif dept == "Survey & Feedback":
-
-        intent = "Feedback Submission"
-
-        action = """
-• Record feedback
-• Categorize response
-• Forward to concerned team
-"""
-
-        risk = "No Major Risk"
-
-    elif dept == "Election Information":
-
-        intent = "Election Query"
-
-        action = """
-• Provide official election information
-• Avoid predictions
-• Share election commission resources
-"""
-
-        risk = "Misinformation Risk"
-
-    else:
-
-        intent = "Healthcare Inquiry"
-
-        action = """
-• Recommend professional consultation
-• Provide healthcare resources
-• Escalate emergency symptoms
-"""
-
-        risk = "Health Advisory Risk"
-
-    summary = (
-        f"The customer contacted {dept} regarding '{issue}'. "
-        f"The agent handled the inquiry and provided assistance."
-    )
-
-    return {
-        "summary": summary,
-        "issue": issue,
-        "intent": intent,
-        "sentiment": sentiment,
-        "priority": priority,
-        "score": score,
-        "action": action,
-        "risk": risk
+    next_actions = {
+        "University Admission": [
+            "Provide eligibility criteria and required documents",
+            "Guide through application portal",
+            "Suggest deadlines and scholarship options"
+        ],
+        "Loan": [
+            "Check loan eligibility",
+            "Suggest documents required",
+            "Recommend suitable loan schemes"
+        ],
+        "Survey": [
+            "Analyze customer sentiment",
+            "Identify improvement areas",
+            "Recommend corrective actions"
+        ],
+        "Election": [
+            "Summarize recent trends",
+            "Highlight leading candidates",
+            "Suggest caution: Predictions may change"
+        ],
+        "Healthcare": [
+            "Provide general information on symptoms",
+            "Recommend consulting doctor",
+            "Suggest preventive measures"
+        ]
     }
 
+    action = random.choice(next_actions[module])
 
-if st.button("Analyze Call"):
+    return summary, action
 
-    if transcript.strip() == "":
-        st.warning("Please enter transcript.")
 
+# -----------------------------
+# STREAMLIT UI
+# -----------------------------
+st.set_page_config(page_title="Supervisor AI Assistant", layout="wide")
+
+st.title("📞 Call-Center Supervisor Assistant")
+st.markdown("Summarization + Next Best Action Recommendation")
+
+# -----------------------------
+# MODULE SELECTION
+# -----------------------------
+module = st.selectbox(
+    "Select Domain Module",
+    ["University Admission", "Loan", "Survey", "Election", "Healthcare"]
+)
+
+# -----------------------------
+# USER INPUT
+# -----------------------------
+user_input = st.text_area("Enter Customer Interaction Text")
+
+if st.button("Analyze Interaction"):
+
+    if not user_input.strip():
+        st.warning("⚠ Please enter some interaction text")
     else:
+        with st.spinner("Processing..."):
 
-        result = analyze(transcript, department)
+            summary, next_action = generate_response(module, user_input)
 
-        st.subheader("📋 Executive Summary")
-        st.write(result["summary"])
+            # Output Section
+            st.subheader("📌 Interaction Summary")
+            st.write(summary)
 
-        st.subheader("🏢 Department")
-        st.write(department)
+            st.subheader("✅ Next Best Action")
+            st.success(next_action)
 
-        st.subheader("🎯 Customer Intent")
-        st.write(result["intent"])
+            # Metrics (Mock for pilot)
+            st.subheader("📊 System Metrics")
+            st.write({
+                "Latency (ms)": random.randint(200, 800),
+                "Confidence Score": round(random.uniform(0.7, 0.95), 2),
+                "Hallucination Risk": "Low",
+                "GPU Cost per 100 requests": "$0.45 (simulated)"
+            })
 
-        st.subheader("❗ Customer Issue")
-        st.write(result["issue"])
+# -----------------------------
+# FEEDBACK LOOP
+# -----------------------------
+st.markdown("---")
+st.subheader("📝 Supervisor Feedback")
 
-        c1, c2 = st.columns(2)
+feedback = st.radio("Was the response useful?", ["Yes", "No"])
 
-        with c1:
-            st.subheader("Sentiment")
-            st.write(result["sentiment"])
-
-        with c2:
-            st.subheader("⚡ Priority")
-            st.write(result["priority"])
-
-        st.subheader("👨‍💼 Agent Performance Score")
-        st.progress(result["score"] / 100)
-        st.write(f"{result['score']} / 100")
-
-        st.subheader("🎯 Next Best Actions")
-        st.write(result["action"])
-
-        st.subheader("⚠️ Risk Flags")
-        st.write(result["risk"])
-
-        st.subheader("📝 Supervisor Recommendation")
-
-        st.info(
-            "Review the interaction, verify resolution status, "
-            "and ensure appropriate follow-up."
-        )
-
-        st.subheader("📊 Dashboard")
-
-        a, b, c = st.columns(3)
-
-        a.metric("Department", department)
-        b.metric("Priority", result["priority"])
-        c.metric("Agent Score", result["score"])
-
-        feedback = st.radio(
-            "Was the analysis useful?",
-            ["👍 Yes", "👎 No"]
-        )
-
-        if feedback:
-            st.success("Feedback Recorded")
+if st.button("Submit Feedback"):
+    st.success("✅ Feedback recorded (simulated logging)")
