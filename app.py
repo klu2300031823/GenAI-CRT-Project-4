@@ -1,161 +1,218 @@
 import streamlit as st
-import requests
-import time
+import google.generativeai as genai
 
-st.set_page_config(page_title="AI Supervisor Assistant", layout="wide")
-st.title("📞 Call-Center Supervisor Assistant")
+st.set_page_config(
+    page_title="Call Center Supervisor Assistant",
+    layout="wide"
+)
 
-# -----------------------------
-# HUGGINGFACE (FREE MODEL)
-# -----------------------------
-API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-base"
+# Gemini Setup
+genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+model = genai.GenerativeModel("gemini-2.5-flash")
 
-# -----------------------------
-# SAFE MODEL CALL (NO CRASH)
-# -----------------------------
-def query_model(prompt):
+st.title("📞 Multi-Domain Call Center Supervisor Assistant")
 
-    for _ in range(2):  # retry logic
-        try:
-            response = requests.post(
-                API_URL,
-                json={"inputs": prompt},
-                timeout=8
-            )
+mode = st.sidebar.radio(
+    "Choose Mode",
+    ["Call Transcript Analysis", "Live Customer Interaction"]
+)
 
-            data = response.json()
+# ----------------------------
+# TRANSCRIPT MODE
+# ----------------------------
 
-            if isinstance(data, list):
-                return data[0].get("generated_text", "")
+if mode == "Call Transcript Analysis":
 
-            return str(data)
+    st.header("📄 Call Transcript Analysis")
 
-        except requests.exceptions.RequestException:
-            time.sleep(1)
+    transcript = st.text_area(
+        "Paste Transcript",
+        height=300
+    )
 
-    return "⚠ Model unavailable"
+    if st.button("Analyze Transcript"):
 
+        if transcript.strip() == "":
+            st.warning("Please enter transcript.")
+            st.stop()
 
-# -----------------------------
-# FALLBACK (IMPORTANT)
-# -----------------------------
-def fallback_response(text):
-    text = text.lower()
+        prompt = f"""
+You are an expert Call Center Supervisor Assistant.
 
-    if "loan" in text:
-        return "Can you provide income details and loan type?"
-    elif "admission" in text or "college" in text:
-        return "Which course and admission deadline are you targeting?"
-    elif "complaint" in text or "feedback" in text:
-        return "Please describe the issue so I can assist better."
-    elif "health" in text or "fever" in text:
-        return "How long have these symptoms been present?"
-    elif "election" in text:
-        return "Are you asking about trends or predictions?"
-    else:
-        return "Can you provide more details about the request?"
+Analyze the following conversation and generate:
 
+1. Executive Summary
+2. Department
+3. Customer Intent
+4. Issue Category
+5. Customer Sentiment
+6. Priority (Low/Medium/High)
+7. Resolution Status
+8. Agent Performance Review
+9. Risk Assessment
+10. Next Best Actions
+11. Supervisor Recommendation
 
-# -----------------------------
-# SESSION STATE
-# -----------------------------
-if "chat" not in st.session_state:
-    st.session_state.chat = []
+Conversation:
 
-# -----------------------------
-# CHAT INPUT
-# -----------------------------
-user_input = st.chat_input("Describe customer interaction...")
+{transcript}
 
-if user_input:
+Format professionally.
+"""
 
-    st.session_state.chat.append(("User", user_input))
+        with st.spinner("Analyzing..."):
+            response = model.generate_content(prompt)
 
-    prompt = f"""
-    You are a professional call-center assistant.
+        st.markdown(response.text)
 
-    Conversation:
-    {user_input}
+# ----------------------------
+# LIVE INTERACTION MODE
+# ----------------------------
 
-    Ask a smart follow-up question or help clearly.
-    """
+else:
 
-    reply = query_model(prompt)
+    st.header("💬 Live Customer Interaction")
 
-    # ✅ fallback safety
-    if "⚠" in reply or reply.strip() == "":
-        reply = fallback_response(user_input)
+    department = st.selectbox(
+        "Select Department",
+        [
+            "University Admissions",
+            "Loan Services",
+            "Survey & Feedback",
+            "Election Information",
+            "Healthcare Support"
+        ]
+    )
 
-    st.session_state.chat.append(("Assistant", reply))
+    department_prompt = {
+        "University Admissions":
+        """
+You are a university admissions call center agent.
+Help with admissions, eligibility, fees, courses, deadlines.
+""",
 
-# -----------------------------
-# SHOW CHAT
-# -----------------------------
-for role, msg in st.session_state.chat:
-    with st.chat_message(role):
-        st.write(msg)
+        "Loan Services":
+        """
+You are a banking and loan support call center agent.
+Help with loans, EMI, applications, eligibility, documents.
+""",
 
-# -----------------------------
-# ANALYSIS (SUMMARY + ACTION)
-# -----------------------------
-if st.button("📊 Generate Summary & Next Action"):
+        "Survey & Feedback":
+        """
+You are a survey and feedback support executive.
+Collect feedback and answer survey-related questions.
+""",
 
-    if len(st.session_state.chat) == 0:
-        st.warning("No conversation available")
-    else:
+        "Election Information":
+        """
+You are an election information call center agent.
+Provide only official election information.
+Do NOT predict winners or provide political advice.
+""",
 
-        convo = " ".join([m for _, m in st.session_state.chat])
+        "Healthcare Support":
+        """
+You are a healthcare support call center agent.
+Provide general health guidance only.
+Do NOT diagnose diseases.
+Encourage consulting healthcare professionals.
+"""
+    }
+
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    if "conversation_text" not in st.session_state:
+        st.session_state.conversation_text = ""
+
+    # Display chat history
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    user_input = st.chat_input("Type your message")
+
+    if user_input:
+
+        st.session_state.messages.append(
+            {"role": "user", "content": user_input}
+        )
+
+        st.session_state.conversation_text += f"\nCustomer: {user_input}"
+
+        with st.chat_message("user"):
+            st.markdown(user_input)
+
+        prompt = f"""
+{department_prompt[department]}
+
+Customer Message:
+{user_input}
+
+Respond like a professional call center agent.
+Keep response concise.
+"""
+
+        response = model.generate_content(prompt)
+
+        bot_reply = response.text
+
+        st.session_state.messages.append(
+            {"role": "assistant", "content": bot_reply}
+        )
+
+        st.session_state.conversation_text += f"\nAgent: {bot_reply}"
+
+        with st.chat_message("assistant"):
+            st.markdown(bot_reply)
+
+    st.divider()
+
+    if st.button("📊 End Call & Generate Supervisor Report"):
+
+        if st.session_state.conversation_text.strip() == "":
+            st.warning("No conversation available.")
+            st.stop()
 
         analysis_prompt = f"""
-        Analyze this call-center conversation:
+You are an expert Call Center Supervisor Assistant.
 
-        {convo}
+Analyze the complete conversation.
 
-        Provide:
-        1. Summary
-        2. Domain (Admission / Loan / Survey / Election / Healthcare)
-        3. Customer intent
-        4. Next-best-action
-        """
+Department:
+{department}
 
-        result = query_model(analysis_prompt)
+Conversation:
+{st.session_state.conversation_text}
 
-        # fallback if model fails
-        if "⚠" in result or result.strip() == "":
-            text = convo.lower()
+Generate:
 
-            if "loan" in text:
-                result = "Summary: Customer is asking about a loan.\nAction: Check eligibility and guide through process."
-            elif "admission" in text:
-                result = "Summary: Customer needs admission info.\nAction: Provide eligibility and deadlines."
-            elif "complaint" in text:
-                result = "Summary: Customer raised an issue.\nAction: Log complaint and escalate."
-            elif "health" in text:
-                result = "Summary: Customer has health concern.\nAction: Suggest consulting doctor."
-            elif "election" in text:
-                result = "Summary: Customer asked about elections.\nAction: Provide neutral trend analysis."
-            else:
-                result = "Summary: General inquiry.\nAction: Collect more details."
+1. Executive Summary
+2. Customer Intent
+3. Issue Category
+4. Sentiment Analysis
+5. Priority
+6. Resolution Status
+7. Agent Performance Review
+8. Risk Assessment
+9. Next Best Actions
+10. Supervisor Recommendation
+11. Compliance Check
 
-        st.subheader("📌 Analysis Result")
-        st.write(result)
+Provide detailed professional analysis.
+"""
 
-# -----------------------------
-# METRICS (PROJECT REQUIREMENT)
-# -----------------------------
-st.markdown("---")
-st.subheader("📊 System Metrics")
+        with st.spinner("Generating Supervisor Report..."):
+            report = model.generate_content(analysis_prompt)
 
-st.write({
-    "Grounded Accuracy": "Medium (hybrid AI)",
-    "Latency": "~500ms (varies)",
-    "Failure Handling": "Enabled ✅",
-    "GPU Cost / 100 requests": "$0 (free model)"
-})
+        st.subheader("📋 Supervisor Analysis Report")
+        st.markdown(report.text)
 
-# -----------------------------
-# RESET
-# -----------------------------
-if st.button("🔄 Reset"):
-    st.session_state.chat = []
-    st.rerun()
+        feedback = st.radio(
+            "Was the analysis useful?",
+            ["👍 Yes", "👎 No"],
+            key="feedback"
+        )
+
+        if feedback:
+            st.success("Feedback Recorded")
