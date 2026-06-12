@@ -1,43 +1,44 @@
 import streamlit as st
-import re
 
-st.set_page_config(page_title="Call Center Supervisor Assistant", layout="wide")
+st.set_page_config(page_title="Multi-Domain Call Center Supervisor Assistant",
+                   layout="wide")
 
-st.title("📞 Call Center Summarization & Next-Best-Action Assistant")
+st.title("📞 Multi-Domain Call Center Supervisor Assistant")
+
+department = st.selectbox(
+    "Select Department",
+    [
+        "University Admissions",
+        "Loan Services",
+        "Survey & Feedback",
+        "Election Information",
+        "Healthcare Support"
+    ]
+)
 
 transcript = st.text_area(
     "Paste Call Transcript",
-    height=300,
-    placeholder="""Customer: My loan application is delayed.
-Agent: Let me check the status.
-Customer: I submitted all documents two weeks ago.
-Agent: I will escalate the request."""
+    height=250
 )
 
-def analyze(text):
+def analyze(text, dept):
 
-    lower = text.lower()
+    text_l = text.lower()
 
-    # Customer Issue
-    issue = "Issue not identified"
+    # Customer issue
+    issue = "Not identified"
     for line in text.split("\n"):
         if line.lower().startswith("customer"):
             issue = line.split(":", 1)[1].strip()
             break
 
-    # Summary
-    summary = (
-        f"The customer contacted support regarding '{issue}'. "
-        f"The agent interacted with the customer and attempted to resolve the concern."
-    )
-
     # Sentiment
-    positive = ["thank", "good", "great", "excellent", "happy", "resolved"]
-    negative = ["problem", "issue", "delay", "refund", "angry",
-                "complaint", "cancel", "damaged", "disappointed"]
+    positive = ["thank", "good", "great", "happy", "excellent"]
+    negative = ["problem", "issue", "delay", "angry",
+                "complaint", "cancel", "disappointed"]
 
-    pos = sum(lower.count(w) for w in positive)
-    neg = sum(lower.count(w) for w in negative)
+    pos = sum(text_l.count(i) for i in positive)
+    neg = sum(text_l.count(i) for i in negative)
 
     if neg > pos:
         sentiment = "Negative 😟"
@@ -49,140 +50,136 @@ def analyze(text):
     # Priority
     priority = "Low"
 
-    if any(w in lower for w in ["delay", "issue", "problem"]):
+    if any(x in text_l for x in ["delay", "problem", "issue"]):
         priority = "Medium"
 
-    if any(w in lower for w in ["refund", "cancel", "angry",
-                                "fraud", "legal", "damaged"]):
+    if any(x in text_l for x in ["angry", "urgent", "emergency"]):
         priority = "High"
 
     # Agent Score
     score = 50
 
-    if "sorry" in lower or "apologize" in lower:
-        score += 10
-
-    if "thank" in lower:
-        score += 5
-
-    if "escalate" in lower:
-        score += 10
-
-    if "check" in lower or "review" in lower:
-        score += 10
-
-    if "resolve" in lower or "resolved" in lower:
+    if "sorry" in text_l or "apologize" in text_l:
         score += 15
 
-    if "don't know" in lower:
-        score -= 15
+    if "check" in text_l:
+        score += 10
 
-    if "cannot help" in lower:
-        score -= 20
+    if "review" in text_l:
+        score += 10
 
-    if "call again" in lower:
-        score -= 10
+    if "escalate" in text_l:
+        score += 15
 
-    score = max(0, min(score, 100))
+    score = min(score, 100)
 
-    # Next Best Actions
-    actions = []
+    # Department Logic
 
-    if "refund" in lower:
-        actions.append("Verify refund eligibility.")
-        actions.append("Process refund request.")
+    if dept == "University Admissions":
 
-    if "damaged" in lower:
-        actions.append("Arrange replacement or return process.")
+        intent = "Admission Inquiry"
 
-    if "loan" in lower:
-        actions.append("Review loan processing status.")
-        actions.append("Update customer on pending verification.")
+        action = """
+• Share admission guidelines
+• Provide application deadlines
+• Send eligibility details
+"""
 
-    if "insurance" in lower:
-        actions.append("Check claim status.")
-        actions.append("Verify supporting documents.")
+        risk = "No Major Risk"
 
-    if "internet" in lower or "network" in lower:
-        actions.append("Run technical diagnostics.")
-        actions.append("Schedule technician visit.")
+    elif dept == "Loan Services":
 
-    if "cancel" in lower:
-        actions.append("Forward case to retention team.")
-        actions.append("Offer retention benefits.")
+        intent = "Loan Inquiry"
 
-    if "payment" in lower or "transaction" in lower:
-        actions.append("Investigate transaction details.")
-        actions.append("Provide refund/reversal timeline.")
+        action = """
+• Verify loan application
+• Check document status
+• Update customer
+"""
 
-    if not actions:
-        actions.append("Create support ticket.")
-        actions.append("Schedule customer follow-up.")
+        risk = "Potential Service Delay"
 
-    # Risk Flags
-    risks = []
+    elif dept == "Survey & Feedback":
 
-    if "angry" in lower:
-        risks.append("High Customer Dissatisfaction")
+        intent = "Feedback Submission"
 
-    if "refund" in lower:
-        risks.append("Refund Escalation Risk")
+        action = """
+• Record feedback
+• Categorize response
+• Forward to concerned team
+"""
 
-    if "cancel" in lower:
-        risks.append("Customer Churn Risk")
+        risk = "No Major Risk"
 
-    if "fraud" in lower:
-        risks.append("Fraud Investigation Required")
+    elif dept == "Election Information":
 
-    if "legal" in lower:
-        risks.append("Legal Escalation Risk")
+        intent = "Election Query"
 
-    if not risks:
-        risks.append("No Major Risks Detected")
+        action = """
+• Provide official election information
+• Avoid predictions
+• Share election commission resources
+"""
 
-    # Compliance Check
-    compliance = "✓ No policy violations detected"
+        risk = "Misinformation Risk"
 
-    email_pattern = r"[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
-    phone_pattern = r"\d{10}"
+    else:
 
-    if re.search(email_pattern, text) or re.search(phone_pattern, text):
-        compliance = "⚠️ Sensitive Information Detected"
+        intent = "Healthcare Inquiry"
+
+        action = """
+• Recommend professional consultation
+• Provide healthcare resources
+• Escalate emergency symptoms
+"""
+
+        risk = "Health Advisory Risk"
+
+    summary = (
+        f"The customer contacted {dept} regarding '{issue}'. "
+        f"The agent handled the inquiry and provided assistance."
+    )
 
     return {
         "summary": summary,
         "issue": issue,
+        "intent": intent,
         "sentiment": sentiment,
         "priority": priority,
         "score": score,
-        "actions": actions,
-        "risks": risks,
-        "compliance": compliance
+        "action": action,
+        "risk": risk
     }
 
 
 if st.button("Analyze Call"):
 
     if transcript.strip() == "":
-        st.warning("Please enter a transcript.")
+        st.warning("Please enter transcript.")
 
     else:
 
-        result = analyze(transcript)
+        result = analyze(transcript, department)
 
         st.subheader("📋 Executive Summary")
         st.write(result["summary"])
 
+        st.subheader("🏢 Department")
+        st.write(department)
+
+        st.subheader("🎯 Customer Intent")
+        st.write(result["intent"])
+
         st.subheader("❗ Customer Issue")
         st.write(result["issue"])
 
-        col1, col2 = st.columns(2)
+        c1, c2 = st.columns(2)
 
-        with col1:
+        with c1:
             st.subheader("😊 Sentiment")
             st.write(result["sentiment"])
 
-        with col2:
+        with c2:
             st.subheader("⚡ Priority")
             st.write(result["priority"])
 
@@ -191,38 +188,30 @@ if st.button("Analyze Call"):
         st.write(f"{result['score']} / 100")
 
         st.subheader("🎯 Next Best Actions")
-        for i, action in enumerate(result["actions"], start=1):
-            st.write(f"{i}. {action}")
+        st.write(result["action"])
 
         st.subheader("⚠️ Risk Flags")
-        for risk in result["risks"]:
-            st.write("•", risk)
-
-        st.subheader("🛡️ Compliance Check")
-        st.write(result["compliance"])
-
-        st.subheader("📊 Supervisor Dashboard")
-
-        c1, c2, c3, c4 = st.columns(4)
-
-        c1.metric("Calls Analyzed", "1")
-        c2.metric("Priority", result["priority"])
-        c3.metric("Agent Score", result["score"])
-        c4.metric("Risk Flags", len(result["risks"]))
+        st.write(result["risk"])
 
         st.subheader("📝 Supervisor Recommendation")
 
         st.info(
-            "Review the issue, monitor resolution progress, "
-            "verify customer satisfaction, and ensure follow-up actions are completed."
+            "Review the interaction, verify resolution status, "
+            "and ensure appropriate follow-up."
         )
 
-        st.subheader("🔄 Feedback")
+        st.subheader("📊 Dashboard")
+
+        a, b, c = st.columns(3)
+
+        a.metric("Department", department)
+        b.metric("Priority", result["priority"])
+        c.metric("Agent Score", result["score"])
 
         feedback = st.radio(
-            "Was this analysis useful?",
+            "Was the analysis useful?",
             ["👍 Yes", "👎 No"]
         )
 
         if feedback:
-            st.success("Feedback recorded.")
+            st.success("Feedback Recorded")
