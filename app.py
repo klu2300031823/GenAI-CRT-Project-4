@@ -41,11 +41,11 @@ def analyze(text, dept):
     neg = sum(text_l.count(i) for i in negative)
 
     if neg > pos:
-        sentiment = "Negative 😟"
+        sentiment = "Negative"
     elif pos > neg:
-        sentiment = "Positive 😊"
+        sentiment = "Positive"
     else:
-        sentiment = "Neutral 😐"
+        sentiment = "Neutral"
 
     # Priority
     priority = "Low"
@@ -176,7 +176,7 @@ if st.button("Analyze Call"):
         c1, c2 = st.columns(2)
 
         with c1:
-            st.subheader("😊 Sentiment")
+            st.subheader("Sentiment")
             st.write(result["sentiment"])
 
         with c2:
