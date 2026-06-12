@@ -58,7 +58,7 @@ def analyze(text):
     )
 
     # Agent score
-    score = 100
+    score = 50
 
     if "sorry" in lower or "apologize" in lower:
         score += 10
