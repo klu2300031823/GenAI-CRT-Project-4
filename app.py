@@ -144,4 +144,4 @@ if st.button("🔄 Reset Conversation"):
     st.session_state.chat = []
     st.session_state.module = "General"
     st.rerun()
-``
+
