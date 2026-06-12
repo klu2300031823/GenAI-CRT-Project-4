@@ -331,371 +331,371 @@
 
 
 # #```python
-# import streamlit as st
-# import google.generativeai as genai
-
-# st.set_page_config(
-#     page_title="AI Call Center Supervisor Assistant",
-#     layout="wide"
-# )
-
-# # -----------------------
-# # GEMINI SETUP
-# # -----------------------
-
-# genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-# model = genai.GenerativeModel("gemini-2.5-flash")
-
-# # -----------------------
-# # DOMAIN PROMPTS
-# # -----------------------
-
-# department_prompt = {
-
-#     "University Admissions": """
-# You are a professional university admissions call center executive.
-
-# Help with:
-# - Admission chances
-# - Eligibility
-# - Scholarships
-# - Course selection
-# - Cutoff trends
-# - Career guidance
-
-# You may provide estimated chances and recommendations.
-
-# Never guarantee admission.
-# Always mention assumptions.
-# """,
-
-#     "Loan Services": """
-# You are a professional loan support executive.
-
-# Help with:
-# - Home loans
-# - Education loans
-# - EMI calculations
-# - Eligibility analysis
-# - Documentation review
-# - Approval likelihood
-
-# You may provide estimated approval probabilities.
-
-# Never guarantee loan approval.
-# """,
-
-#     "Survey & Feedback": """
-# You are a survey analytics specialist.
-
-# Help with:
-# - Survey interpretation
-# - Feedback analysis
-# - Trend identification
-# - Statistical summaries
-
-# Provide insights and recommendations.
-# """,
-
-#     "Election Information": """
-# You are an election analytics specialist.
-
-# Help with:
-# - Poll analysis
-# - Vote share interpretation
-# - Election trends
-# - Historical comparisons
-
-# You may discuss likely scenarios and estimates.
-
-# Never claim certainty.
-# Always mention uncertainty and limitations.
-# """,
-
-#     "Healthcare Support": """
-# You are a healthcare support specialist.
-
-# Help with:
-# - Symptom interpretation
-# - Health guidance
-# - Wellness information
-# - Preventive care
-
-# You may discuss possible conditions.
-
-# Do not claim a definite diagnosis.
-# Recommend medical consultation when appropriate.
-# """
-# }
-
-# # -----------------------
-# # TITLE
-# # -----------------------
-
-# st.title("📞 AI Call Center Supervisor Assistant")
-
-# mode = st.sidebar.radio(
-#     "Choose Mode",
-#     [
-#         "Call Transcript Analysis",
-#         "Live Customer Interaction"
-#     ]
-# )
-
-# # =====================================================
-# # TRANSCRIPT ANALYSIS
-# # =====================================================
-
-# if mode == "Call Transcript Analysis":
-
-#     st.header("📄 Call Transcript Analysis")
-
-#     transcript = st.text_area(
-#         "Paste Transcript",
-#         height=350
-#     )
-
-#     if st.button("Analyze Transcript"):
-
-#         if not transcript.strip():
-#             st.warning("Please enter transcript.")
-#             st.stop()
-
-#         prompt = f"""
-# You are an expert Call Center Supervisor Assistant.
-
-# Analyze the following transcript.
-
-# Generate:
-
-# # Executive Summary
-
-# # Department
-# (Identify automatically)
-
-# # Customer Intent
-
-# # Issue Category
-
-# # Key Facts Identified
-
-# # Customer Sentiment
-
-# # Priority
-
-# # Resolution Status
-
-# # Agent Performance Review
-
-# # Risk Assessment
-
-# # Predicted Outcome
-# (If applicable)
-
-# # Confidence Score (0-100)
-
-# # Next Best Actions
-
-# # Supervisor Recommendation
-
-# # Compliance Check
-
-# # Business Impact
-
-# Transcript:
-
-# {transcript}
-
-# Provide a detailed professional report.
-# """
-
-#         with st.spinner("Analyzing Transcript..."):
-#             response = model.generate_content(prompt)
-
-#         st.markdown(response.text)
-
-# # =====================================================
-# # LIVE CUSTOMER INTERACTION
-# # =====================================================
-
-# else:
-
-#     st.header("💬 Live Customer Interaction")
-
-#     department = st.selectbox(
-#         "Select Department",
-#         [
-#             "University Admissions",
-#             "Loan Services",
-#             "Survey & Feedback",
-#             "Election Information",
-#             "Healthcare Support"
-#         ]
-#     )
-
-#     if "messages" not in st.session_state:
-#         st.session_state.messages = []
-
-#     if "conversation_text" not in st.session_state:
-#         st.session_state.conversation_text = ""
-
-#     col1, col2 = st.columns([1,1])
-
-#     with col1:
-#         if st.button("🆕 Start New Call"):
-#             st.session_state.messages = []
-#             st.session_state.conversation_text = ""
-#             st.rerun()
-
-#     with col2:
-#         st.write(f"**Department:** {department}")
-
-#     for msg in st.session_state.messages:
-#         with st.chat_message(msg["role"]):
-#             st.markdown(msg["content"])
-
-#     user_input = st.chat_input("Customer Message")
-
-#     if user_input:
-
-#         st.session_state.messages.append(
-#             {
-#                 "role": "user",
-#                 "content": user_input
-#             }
-#         )
-
-#         st.session_state.conversation_text += (
-#             f"\nCustomer: {user_input}"
-#         )
-
-#         with st.chat_message("user"):
-#             st.markdown(user_input)
-
-#         prompt = f"""
-# {department_prompt[department]}
-
-# Customer Message:
-
-# {user_input}
-
-# Respond like a professional call center executive.
-
-# You may:
-# - Explain
-# - Analyze
-# - Estimate
-# - Predict likely outcomes
-# - Provide confidence levels
-
-# Never guarantee outcomes.
-
-# Keep answers concise and conversational.
-# """
-
-#         with st.spinner("Agent Responding..."):
-#             response = model.generate_content(prompt)
-
-#         bot_reply = response.text
-
-#         st.session_state.messages.append(
-#             {
-#                 "role": "assistant",
-#                 "content": bot_reply
-#             }
-#         )
-
-#         st.session_state.conversation_text += (
-#             f"\nAgent: {bot_reply}"
-#         )
-
-#         with st.chat_message("assistant"):
-#             st.markdown(bot_reply)
-
-#     st.divider()
-
-#     if st.button("📊 End Call & Generate Supervisor Report"):
-
-#         if not st.session_state.conversation_text.strip():
-#             st.warning("No conversation available.")
-#             st.stop()
-
-#         analysis_prompt = f"""
-# You are an expert Call Center Supervisor Assistant.
-
-# Analyze the complete call.
-
-# Department:
-# {department}
-
-# Conversation:
-# {st.session_state.conversation_text}
-
-# Generate:
-
-# # Executive Summary
-
-# # Customer Intent
-
-# # Issue Category
-
-# # Key Facts Identified
-
-# # Customer Sentiment
-
-# # Priority
-
-# # Resolution Status
-
-# # Agent Performance Review
-
-# # Risk Assessment
-
-# # Predicted Outcome
-# (If applicable)
-
-# # Confidence Score (0-100)
-
-# # Next Best Actions
-
-# # Supervisor Recommendation
-
-# # Compliance Check
-
-# # Business Impact
-
-# Provide a detailed professional supervisor report.
-# """
-
-#         with st.spinner("Generating Supervisor Report..."):
-#             report = model.generate_content(
-#                 analysis_prompt
-#             )
-
-#         st.subheader("📋 Supervisor Analysis Report")
-
-#         st.markdown(report.text)
-
-#         feedback = st.radio(
-#             "Was this report useful?",
-#             ["👍 Yes", "👎 No"],
-#             key="feedback"
-#         )
-
-#         if feedback:
-#             st.success("Feedback Recorded")
-# #```
-
 import streamlit as st
 import google.generativeai as genai
 
+st.set_page_config(
+    page_title="AI Call Center Supervisor Assistant",
+    layout="wide"
+)
+
+# -----------------------
+# GEMINI SETUP
+# -----------------------
+
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+model = genai.GenerativeModel("gemini-2.5-flash")
 
-try:
-    models = genai.list_models()
+# -----------------------
+# DOMAIN PROMPTS
+# -----------------------
 
-    for m in models:
-        st.write(m.name)
+department_prompt = {
 
-except Exception as e:
-    st.error(str(e))
+    "University Admissions": """
+You are a professional university admissions call center executive.
+
+Help with:
+- Admission chances
+- Eligibility
+- Scholarships
+- Course selection
+- Cutoff trends
+- Career guidance
+
+You may provide estimated chances and recommendations.
+
+Never guarantee admission.
+Always mention assumptions.
+""",
+
+    "Loan Services": """
+You are a professional loan support executive.
+
+Help with:
+- Home loans
+- Education loans
+- EMI calculations
+- Eligibility analysis
+- Documentation review
+- Approval likelihood
+
+You may provide estimated approval probabilities.
+
+Never guarantee loan approval.
+""",
+
+    "Survey & Feedback": """
+You are a survey analytics specialist.
+
+Help with:
+- Survey interpretation
+- Feedback analysis
+- Trend identification
+- Statistical summaries
+
+Provide insights and recommendations.
+""",
+
+    "Election Information": """
+You are an election analytics specialist.
+
+Help with:
+- Poll analysis
+- Vote share interpretation
+- Election trends
+- Historical comparisons
+
+You may discuss likely scenarios and estimates.
+
+Never claim certainty.
+Always mention uncertainty and limitations.
+""",
+
+    "Healthcare Support": """
+You are a healthcare support specialist.
+
+Help with:
+- Symptom interpretation
+- Health guidance
+- Wellness information
+- Preventive care
+
+You may discuss possible conditions.
+
+Do not claim a definite diagnosis.
+Recommend medical consultation when appropriate.
+"""
+}
+
+# -----------------------
+# TITLE
+# -----------------------
+
+st.title("📞 AI Call Center Supervisor Assistant")
+
+mode = st.sidebar.radio(
+    "Choose Mode",
+    [
+        "Call Transcript Analysis",
+        "Live Customer Interaction"
+    ]
+)
+
+# =====================================================
+# TRANSCRIPT ANALYSIS
+# =====================================================
+
+if mode == "Call Transcript Analysis":
+
+    st.header("📄 Call Transcript Analysis")
+
+    transcript = st.text_area(
+        "Paste Transcript",
+        height=350
+    )
+
+    if st.button("Analyze Transcript"):
+
+        if not transcript.strip():
+            st.warning("Please enter transcript.")
+            st.stop()
+
+        prompt = f"""
+You are an expert Call Center Supervisor Assistant.
+
+Analyze the following transcript.
+
+Generate:
+
+# Executive Summary
+
+# Department
+(Identify automatically)
+
+# Customer Intent
+
+# Issue Category
+
+# Key Facts Identified
+
+# Customer Sentiment
+
+# Priority
+
+# Resolution Status
+
+# Agent Performance Review
+
+# Risk Assessment
+
+# Predicted Outcome
+(If applicable)
+
+# Confidence Score (0-100)
+
+# Next Best Actions
+
+# Supervisor Recommendation
+
+# Compliance Check
+
+# Business Impact
+
+Transcript:
+
+{transcript}
+
+Provide a detailed professional report.
+"""
+
+        with st.spinner("Analyzing Transcript..."):
+            response = model.generate_content(prompt)
+
+        st.markdown(response.text)
+
+# =====================================================
+# LIVE CUSTOMER INTERACTION
+# =====================================================
+
+else:
+
+    st.header("💬 Live Customer Interaction")
+
+    department = st.selectbox(
+        "Select Department",
+        [
+            "University Admissions",
+            "Loan Services",
+            "Survey & Feedback",
+            "Election Information",
+            "Healthcare Support"
+        ]
+    )
+
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    if "conversation_text" not in st.session_state:
+        st.session_state.conversation_text = ""
+
+    col1, col2 = st.columns([1,1])
+
+    with col1:
+        if st.button("🆕 Start New Call"):
+            st.session_state.messages = []
+            st.session_state.conversation_text = ""
+            st.rerun()
+
+    with col2:
+        st.write(f"**Department:** {department}")
+
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    user_input = st.chat_input("Customer Message")
+
+    if user_input:
+
+        st.session_state.messages.append(
+            {
+                "role": "user",
+                "content": user_input
+            }
+        )
+
+        st.session_state.conversation_text += (
+            f"\nCustomer: {user_input}"
+        )
+
+        with st.chat_message("user"):
+            st.markdown(user_input)
+
+        prompt = f"""
+{department_prompt[department]}
+
+Customer Message:
+
+{user_input}
+
+Respond like a professional call center executive.
+
+You may:
+- Explain
+- Analyze
+- Estimate
+- Predict likely outcomes
+- Provide confidence levels
+
+Never guarantee outcomes.
+
+Keep answers concise and conversational.
+"""
+
+        with st.spinner("Agent Responding..."):
+            response = model.generate_content(prompt)
+
+        bot_reply = response.text
+
+        st.session_state.messages.append(
+            {
+                "role": "assistant",
+                "content": bot_reply
+            }
+        )
+
+        st.session_state.conversation_text += (
+            f"\nAgent: {bot_reply}"
+        )
+
+        with st.chat_message("assistant"):
+            st.markdown(bot_reply)
+
+    st.divider()
+
+    if st.button("📊 End Call & Generate Supervisor Report"):
+
+        if not st.session_state.conversation_text.strip():
+            st.warning("No conversation available.")
+            st.stop()
+
+        analysis_prompt = f"""
+You are an expert Call Center Supervisor Assistant.
+
+Analyze the complete call.
+
+Department:
+{department}
+
+Conversation:
+{st.session_state.conversation_text}
+
+Generate:
+
+# Executive Summary
+
+# Customer Intent
+
+# Issue Category
+
+# Key Facts Identified
+
+# Customer Sentiment
+
+# Priority
+
+# Resolution Status
+
+# Agent Performance Review
+
+# Risk Assessment
+
+# Predicted Outcome
+(If applicable)
+
+# Confidence Score (0-100)
+
+# Next Best Actions
+
+# Supervisor Recommendation
+
+# Compliance Check
+
+# Business Impact
+
+Provide a detailed professional supervisor report.
+"""
+
+        with st.spinner("Generating Supervisor Report..."):
+            report = model.generate_content(
+                analysis_prompt
+            )
+
+        st.subheader("📋 Supervisor Analysis Report")
+
+        st.markdown(report.text)
+
+        feedback = st.radio(
+            "Was this report useful?",
+            ["👍 Yes", "👎 No"],
+            key="feedback"
+        )
+
+        if feedback:
+            st.success("Feedback Recorded")
+#```
+
+# import streamlit as st
+# import google.generativeai as genai
+
+# genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+
+# try:
+#     models = genai.list_models()
+
+#     for m in models:
+#         st.write(m.name)
+
+# except Exception as e:
+#     st.error(str(e))
