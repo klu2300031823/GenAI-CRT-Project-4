@@ -691,12 +691,11 @@ import google.generativeai as genai
 
 genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 
-st.title("Gemini Test")
+try:
+    models = genai.list_models()
 
-if st.button("Test"):
-    try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content("Say Hello")
-        st.success(response.text)
-    except Exception as e:
-        st.error(str(e))
+    for m in models:
+        st.write(m.name)
+
+except Exception as e:
+    st.error(str(e))
