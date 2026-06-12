@@ -1,147 +1,80 @@
-
 import streamlit as st
-from datetime import datetime
-import random
+import requests
 
-st.set_page_config(page_title="AI Call Center Assistant", layout="wide")
-st.title("📞 Real-Time Supervisor AI Assistant")
+st.set_page_config(page_title="AI Supervisor Assistant", layout="wide")
+st.title("📞 Call-Center Supervisor Assistant (No API, No Install)")
 
 # -----------------------------
-# SESSION STATE
+# FREE HUGGINGFACE ENDPOINT
+# -----------------------------
+API_URL = "https://api-inference.huggingface.co/models/google/flan-t5-base"
+
+def query_model(prompt):
+    response = requests.post(API_URL, json={"inputs": prompt})
+    try:
+        return response.json()[0]["generated_text"]
+    except:
+        return "Model is busy, please try again."
+
+# -----------------------------
+# SESSION
 # -----------------------------
 if "chat" not in st.session_state:
     st.session_state.chat = []
 
-if "module" not in st.session_state:
-    st.session_state.module = "General"
-
 # -----------------------------
-# MODULE DETECTION (simple)
+# INPUT
 # -----------------------------
-def detect_module(text):
-    text = text.lower()
-    if "admission" in text or "college" in text:
-        return "University Admission"
-    elif "loan" in text or "interest" in text:
-        return "Loan"
-    elif "feedback" in text or "complaint" in text:
-        return "Survey"
-    elif "vote" in text or "election" in text:
-        return "Election"
-    elif "fever" in text or "pain" in text:
-        return "Healthcare"
-    return "General"
-
-# -----------------------------
-# AI RESPONSE (SMARTER LOGIC)
-# -----------------------------
-def ai_response(user_input):
-
-    module = detect_module(user_input)
-    st.session_state.module = module
-
-    # Simulated reasoning
-    followups = {
-        "University Admission": "Can you tell me which program and deadline you are targeting?",
-        "Loan": "May I know your income range or loan type?",
-        "Survey": "Could you describe the issue or feedback in more detail?",
-        "Election": "Are you asking about trends or predictions?",
-        "Healthcare": "How long have you been experiencing this?"
-    }
-
-    return followups.get(module, "Could you provide more details?")
-
-# -----------------------------
-# CHAT UI
-# -----------------------------
-user_input = st.chat_input("Describe customer interaction...")
+user_input = st.chat_input("Enter customer interaction...")
 
 if user_input:
     st.session_state.chat.append(("User", user_input))
 
-    response = ai_response(user_input)
-    st.session_state.chat.append(("Assistant", response))
+    prompt = f"""
+    You are a professional call-center assistant.
 
-# Display chat
+    Conversation:
+    {user_input}
+
+    Ask a smart follow-up question.
+    """
+
+    reply = query_model(prompt)
+    st.session_state.chat.append(("Assistant", reply))
+
+# -----------------------------
+# SHOW CHAT
+# -----------------------------
 for role, msg in st.session_state.chat:
     with st.chat_message(role):
         st.write(msg)
 
 # -----------------------------
-# FINAL ANALYSIS
+# ANALYSIS
 # -----------------------------
-if st.button("📊 Generate Call Summary & Action"):
+if st.button("📊 Generate Summary & Action"):
 
-    if len(st.session_state.chat) == 0:
-        st.warning("No conversation yet!")
-    else:
+    convo = " ".join([m for _, m in st.session_state.chat])
 
-        st.subheader("📌 Call Summary")
+    prompt = f"""
+    Analyze call-center conversation:
 
-        # Generate smarter summary
-        conversation = " ".join([msg for role, msg in st.session_state.chat])
+    {convo}
 
-        summary = f"""
-        Customer interaction falls under **{st.session_state.module}**.
-        Key discussion points include: {conversation[:200]}...
-        The customer is seeking assistance and requires guided resolution.
-        """
+    Give:
+    1. Summary
+    2. Domain (Loan / Admission / Survey / Election / Healthcare)
+    3. Next-best-action
+    """
 
-        st.write(summary)
+    result = query_model(prompt)
 
-        # -----------------------------
-        # NEXT BEST ACTION (SMART)
-        # -----------------------------
-        st.subheader("✅ Next Best Action")
-
-        actions = {
-            "University Admission": [
-                "Provide program eligibility and deadlines",
-                "Share admission portal link",
-                "Suggest scholarship opportunities"
-            ],
-            "Loan": [
-                "Evaluate eligibility based on income",
-                "Recommend best loan plan",
-                "Request required documents"
-            ],
-            "Survey": [
-                "Log complaint for escalation",
-                "Identify root cause",
-                "Trigger service recovery"
-            ],
-            "Election": [
-                "Provide neutral trend analysis",
-                "Avoid definitive prediction",
-                "Highlight uncertainty in data"
-            ],
-            "Healthcare": [
-                "Provide general guidance only",
-                "Advise consultation with doctor",
-                "Avoid diagnosis claims"
-            ],
-            "General": ["Escalate to human supervisor"]
-        }
-
-        st.success(random.choice(actions[st.session_state.module]))
-
-        # -----------------------------
-        # METRICS (for evaluation requirement)
-        # -----------------------------
-        st.subheader("📊 System Metrics")
-
-        st.write({
-            "Grounded Accuracy": "Medium (simulated)",
-            "Latency (ms)": random.randint(300, 900),
-            "Unsafe Response Rate": "Low",
-            "GPU Cost / 100 calls": "$0.50 (simulated)"
-        })
+    st.subheader("📌 Analysis")
+    st.write(result)
 
 # -----------------------------
 # RESET
 # -----------------------------
-if st.button("🔄 Reset Conversation"):
+if st.button("🔄 Reset"):
     st.session_state.chat = []
-    st.session_state.module = "General"
     st.rerun()
-
