@@ -1,156 +1,123 @@
 import streamlit as st
 import re
 
-st.set_page_config(page_title="Call Center Supervisor Assistant", layout="wide")
+st.set_page_config(page_title="Call Center Assistant", layout="wide")
 
-st.title("📞 Call-Center Summarization & Next-Best-Action Assistant")
+st.title("📞 Call Center Summarization & Next Best Action Assistant")
 
-st.write("Paste a customer-agent conversation and get a summary, sentiment, key issues, and next-best actions.")
+transcript = st.text_area(
+    "Paste Call Transcript",
+    height=300
+)
 
-# ---------- FUNCTIONS ----------
+def analyze(text):
 
-def summarize_call(text):
-    lines = [i.strip() for i in text.split("\n") if i.strip()]
+    lower = text.lower()
 
-    customer_lines = []
-    agent_lines = []
+    # Sentiment
+    pos_words = ["thank", "good", "great", "excellent", "resolved", "happy"]
+    neg_words = ["issue", "problem", "delay", "complaint", "refund", "angry",
+                 "cancel", "damaged", "disappointed"]
 
-    for line in lines:
-        if line.lower().startswith("customer"):
-            customer_lines.append(line)
-        elif line.lower().startswith("agent"):
-            agent_lines.append(line)
-
-    summary = []
-
-    if customer_lines:
-        summary.append("Customer contacted support regarding an issue.")
-
-    if agent_lines:
-        summary.append("Agent responded and provided assistance.")
-
-    return " ".join(summary)
-
-
-def detect_sentiment(text):
-    text = text.lower()
-
-    positive = ["thank", "good", "great", "happy", "resolved", "excellent"]
-    negative = ["problem", "issue", "bad", "angry", "cancel", "refund", "complaint"]
-
-    pos = sum(text.count(word) for word in positive)
-    neg = sum(text.count(word) for word in negative)
+    pos = sum(lower.count(w) for w in pos_words)
+    neg = sum(lower.count(w) for w in neg_words)
 
     if neg > pos:
-        return "Negative 😟"
+        sentiment = "Negative 😟"
     elif pos > neg:
-        return "Positive 😊"
+        sentiment = "Positive 😊"
     else:
-        return "Neutral 😐"
+        sentiment = "Neutral 😐"
 
+    # Priority
+    high_words = ["angry", "refund", "cancel", "damaged", "urgent"]
+    priority = "Low"
 
-def find_keywords(text):
-    words = re.findall(r'\b[a-zA-Z]{4,}\b', text.lower())
+    for w in high_words:
+        if w in lower:
+            priority = "High"
+            break
 
-    ignore = {
-        "customer","agent","hello","please","thank",
-        "thanks","there","their","about","would",
-        "could","have","your","with","this"
+    if "delay" in lower or "issue" in lower:
+        priority = "Medium"
+
+    # Customer Issue
+    customer_lines = []
+
+    for line in text.split("\n"):
+        if line.lower().startswith("customer"):
+            customer_lines.append(line)
+
+    issue = customer_lines[0] if customer_lines else "Issue not identified"
+
+    # Summary
+    summary = (
+        f"The customer contacted support regarding "
+        f"{issue.replace('Customer:', '').strip()}. "
+        f"The agent interacted with the customer and attempted resolution."
+    )
+
+    # Agent score
+    score = 100
+
+    if "sorry" in lower or "apologize" in lower:
+        score += 10
+
+    if "thank" in lower:
+        score += 5
+
+    score = min(score, 100)
+
+    # Next Action
+    if "refund" in lower:
+        action = "Process refund and update customer."
+    elif "loan" in lower:
+        action = "Review application and provide status update."
+    elif "internet" in lower or "network" in lower:
+        action = "Run diagnostics and assign technician."
+    elif "insurance" in lower:
+        action = "Verify claim and provide update."
+    elif "cancel" in lower:
+        action = "Forward to retention team."
+    else:
+        action = "Create support ticket and follow up."
+
+    return {
+        "summary": summary,
+        "issue": issue,
+        "sentiment": sentiment,
+        "priority": priority,
+        "score": score,
+        "action": action
     }
-
-    freq = {}
-
-    for word in words:
-        if word not in ignore:
-            freq[word] = freq.get(word, 0) + 1
-
-    keywords = sorted(freq.items(), key=lambda x: x[1], reverse=True)
-
-    return [k[0] for k in keywords[:5]]
-
-
-def next_best_action(text):
-    t = text.lower()
-
-    if "refund" in t:
-        return [
-            "Verify refund eligibility",
-            "Escalate to billing team",
-            "Follow up within 24 hours"
-        ]
-
-    if "cancel" in t:
-        return [
-            "Offer retention discount",
-            "Explain available plans",
-            "Escalate if customer still wants cancellation"
-        ]
-
-    if "loan" in t:
-        return [
-            "Verify customer documents",
-            "Check loan eligibility",
-            "Schedule callback"
-        ]
-
-    if "insurance" in t:
-        return [
-            "Verify policy details",
-            "Provide claim information",
-            "Create service ticket"
-        ]
-
-    return [
-        "Create support ticket",
-        "Monitor customer satisfaction",
-        "Schedule follow-up call"
-    ]
-
-
-# ---------- UI ----------
-
-conversation = st.text_area(
-    "Paste Call Transcript",
-    height=350,
-    placeholder="""Customer: My loan application is delayed.
-Agent: Let me check the status.
-Customer: I submitted all documents last week.
-Agent: We will escalate the request."""
-)
 
 if st.button("Analyze Call"):
 
-    if conversation.strip() == "":
-        st.warning("Please enter a transcript.")
-    else:
+    if transcript.strip():
 
-        summary = summarize_call(conversation)
-        sentiment = detect_sentiment(conversation)
-        keywords = find_keywords(conversation)
-        actions = next_best_action(conversation)
+        result = analyze(transcript)
 
-        col1, col2 = st.columns(2)
+        st.subheader("📋 Executive Summary")
+        st.write(result["summary"])
 
-        with col1:
-            st.subheader("📋 Call Summary")
-            st.write(summary)
+        st.subheader("❗ Customer Issue")
+        st.write(result["issue"])
 
-            st.subheader("😊 Sentiment")
-            st.success(sentiment)
+        st.subheader("😊 Sentiment")
+        st.write(result["sentiment"])
 
-        with col2:
-            st.subheader("🔑 Key Topics")
-            for k in keywords:
-                st.write("•", k)
+        st.subheader("⚡ Priority")
+        st.write(result["priority"])
 
-        st.subheader("🎯 Next Best Actions")
+        st.subheader("👨‍💼 Agent Performance Score")
+        st.progress(result["score"] / 100)
+        st.write(f"{result['score']} / 100")
 
-        for i, action in enumerate(actions, start=1):
-            st.write(f"{i}. {action}")
+        st.subheader("🎯 Next Best Action")
+        st.write(result["action"])
 
-        st.subheader("👨‍💼 Supervisor Notes")
-
+        st.subheader("📝 Supervisor Recommendation")
         st.info(
-            "Review customer concern, verify resolution status, "
-            "and ensure follow-up actions are completed."
+            "Review the issue, monitor resolution progress, "
+            "and ensure customer follow-up is completed."
         )
