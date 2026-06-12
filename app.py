@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 
 st.set_page_config(page_title="AI Supervisor Assistant", layout="wide")
-st.title("📞 Call-Center Supervisor Assistant (No API, No Install)")
+st.title("📞 Call-Center Supervisor Assistant")
 
 # -----------------------------
 # FREE HUGGINGFACE ENDPOINT
