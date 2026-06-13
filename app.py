@@ -4,7 +4,7 @@ st.set_page_config(page_title="AI Call Center Supervisor Assistant", layout="wid
 
 st.title("📞 AI Call Center Supervisor Assistant")
 
-category = st.selectbox(
+category = st.radio(
     "Select Category",
     [
         "Loan",
@@ -15,7 +15,8 @@ category = st.selectbox(
         "Credit Card",
         "Complaint / Support",
         "General"
-    ]
+    ],
+    horizontal=True
 )
 
 transcript = st.text_area(
